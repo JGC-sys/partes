@@ -293,7 +293,9 @@
                     <label>Fecha y Hora de Entrada <span class="required">*</span></label>
                     <div class="datetime-group">
                         <input type="date" id="fechaEntrada" required>
-                        <input type="time" id="horaEntrada" required>
+                        <select id="horaEntrada" required>
+                            <option value="">Selecciona hora...</option>
+                        </select>
                     </div>
                 </div>
 
@@ -301,7 +303,9 @@
                     <label>Fecha y Hora de Salida <span class="required">*</span></label>
                     <div class="datetime-group">
                         <input type="date" id="fechaSalida" required>
-                        <input type="time" id="horaSalida" required>
+                        <select id="horaSalida" required>
+                            <option value="">Selecciona hora...</option>
+                        </select>
                     </div>
                 </div>
 
@@ -321,6 +325,38 @@
         let clientes = [];
         let motivos = [];
 
+        // Generar opciones de hora cada 30 minutos
+        function generarOpcionesHora() {
+            const opciones = [];
+            for (let hora = 0; hora < 24; hora++) {
+                for (let minuto = 0; minuto < 60; minuto += 30) {
+                    const horaStr = String(hora).padStart(2, '0');
+                    const minutoStr = String(minuto).padStart(2, '0');
+                    opciones.push(`${horaStr}:${minutoStr}`);
+                }
+            }
+            return opciones;
+        }
+
+        // Poblar selectores de hora
+        function poblarSelectoresHora() {
+            const opciones = generarOpcionesHora();
+            const selectHoraEntrada = document.getElementById('horaEntrada');
+            const selectHoraSalida = document.getElementById('horaSalida');
+
+            opciones.forEach(hora => {
+                const optionEntrada = document.createElement('option');
+                optionEntrada.value = hora;
+                optionEntrada.textContent = hora;
+                selectHoraEntrada.appendChild(optionEntrada);
+
+                const optionSalida = document.createElement('option');
+                optionSalida.value = hora;
+                optionSalida.textContent = hora;
+                selectHoraSalida.appendChild(optionSalida);
+            });
+        }
+
         // Verificar sesión al cargar
         window.addEventListener('DOMContentLoaded', async () => {
             // Verificar si hay sesión
@@ -332,6 +368,9 @@
 
             userData = JSON.parse(userDataStr);
             document.getElementById('userName').textContent = `Bienvenido, ${userData.nombreCompleto}`;
+
+            // Poblar selectores de hora
+            poblarSelectoresHora();
 
             // Cargar datos iniciales
             await cargarClientes();
@@ -349,13 +388,24 @@
         function setFechaHoraActual() {
             const ahora = new Date();
             const fecha = ahora.toISOString().split('T')[0];
-            const hora = ahora.toTimeString().slice(0, 5);
+            
+            // Redondear a la hora más cercana en intervalos de 30 minutos
+            const minutos = ahora.getMinutes();
+            const minutosRedondeados = minutos < 30 ? 0 : 30;
+            const horaActual = ahora.getHours();
+            
+            const horaStr = String(horaActual).padStart(2, '0');
+            const minutoStr = String(minutosRedondeados).padStart(2, '0');
+            const hora = `${horaStr}:${minutoStr}`;
 
             document.getElementById('fechaEntrada').value = fecha;
             document.getElementById('horaEntrada').value = hora;
             
             // Calcular hora de salida (30 minutos después)
-            calcularHoraSalida(ahora);
+            const fechaEntradaObj = new Date(ahora);
+            fechaEntradaObj.setMinutes(minutosRedondeados);
+            fechaEntradaObj.setSeconds(0);
+            calcularHoraSalida(fechaEntradaObj);
         }
 
         // Calcular hora de salida automáticamente (30 minutos después)
@@ -364,7 +414,9 @@
             const fechaSalida = new Date(fechaEntrada.getTime() + 30 * 60000);
             
             const fechaSalidaStr = fechaSalida.toISOString().split('T')[0];
-            const horaSalidaStr = fechaSalida.toTimeString().slice(0, 5);
+            const horaStr = String(fechaSalida.getHours()).padStart(2, '0');
+            const minutoStr = String(fechaSalida.getMinutes()).padStart(2, '0');
+            const horaSalidaStr = `${horaStr}:${minutoStr}`;
 
             document.getElementById('fechaSalida').value = fechaSalidaStr;
             document.getElementById('horaSalida').value = horaSalidaStr;
