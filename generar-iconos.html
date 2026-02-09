@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Iconos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        canvas {
+            border: 1px solid #ccc;
+            margin: 20px 0;
+        }
+        button {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        button:hover {
+            background: #5568d3;
+        }
+        .info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>📱 Generador de Iconos</h1>
+    <div class="info">
+        <p>Esta página generará automáticamente los iconos necesarios para tu PWA.</p>
+        <p>Haz clic en los botones para descargarlos.</p>
+    </div>
+
+    <h3>Icono 192x192</h3>
+    <canvas id="canvas192" width="192" height="192"></canvas>
+    <br>
+    <button onclick="downloadIcon(192)">📥 Descargar icon-192.png</button>
+
+    <h3>Icono 512x512</h3>
+    <canvas id="canvas512" width="512" height="512"></canvas>
+    <br>
+    <button onclick="downloadIcon(512)">📥 Descargar icon-512.png</button>
+
+    <script>
+        // Función para crear el icono
+        function createIcon(size) {
+            const canvas = document.getElementById('canvas' + size);
+            const ctx = canvas.getContext('2d');
+
+            // Gradiente de fondo
+            const gradient = ctx.createLinearGradient(0, 0, size, size);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            
+            // Fondo con gradiente
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+
+            // Agregar icono de documento
+            ctx.fillStyle = 'white';
+            ctx.font = `${size * 0.6}px Arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('📋', size / 2, size / 2);
+        }
+
+        // Función para descargar el icono
+        function downloadIcon(size) {
+            const canvas = document.getElementById('canvas' + size);
+            const link = document.createElement('a');
+            link.download = `icon-${size}.png`;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // Generar iconos al cargar la página
+        createIcon(192);
+        createIcon(512);
+    </script>
+</body>
+</html>
