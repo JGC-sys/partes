@@ -1,193 +1,594 @@
-// =================================== 
-// GOOGLE APPS SCRIPT - API BACKEND 
-// Para PWA Registro de Partes
-// CON VALIDACIÓN DE USUARIO ACTIVO + MOTIVOS
-// =================================== 
-
-// Nombres de las pestañas
-const SHEET_USUARIOS = 'Usuarios';
-const SHEET_CLIENTES = 'Clientes';
-const SHEET_REGISTROS = 'Registros';
-const SHEET_MOTIVOS = 'Motivos';
-
-// Función principal que recibe todas las peticiones
-function doPost(e) {
-  try {
-    const data = JSON.parse(e.postData.contents);
-    const action = data.action;
-    
-    switch(action) {
-      case 'login':
-        return login(data.usuario, data.password);
-      
-      case 'getClientes':
-        if (!isUserActive(data.usuario)) {
-          return createResponse(false, 'Tu sesión ha expirado. Vuelve a iniciar sesión.');
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#4CAF50">
+    <title>Registro de Partes</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="config.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        return getClientes();
-      
-      case 'getReferencias':
-        if (!isUserActive(data.usuario)) {
-          return createResponse(false, 'Tu sesión ha expirado. Vuelve a iniciar sesión.');
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
         }
-        return getReferencias(data.cliente);
-      
-      // ✅ NUEVA FUNCIÓN: Obtener motivos
-      case 'getMotivos':
-        if (!isUserActive(data.usuario)) {
-          return createResponse(false, 'Tu sesión ha expirado. Vuelve a iniciar sesión.');
+
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
         }
-        return getMotivos();
-      
-      case 'saveRegistro':
-        if (!isUserActive(data.registro.usuario)) {
-          return createResponse(false, 'Tu sesión ha expirado. Vuelve a iniciar sesión.');
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        return saveRegistro(data.registro);
-      
-      default:
-        return createResponse(false, 'Acción no válida');
-    }
-  } catch(error) {
-    return createResponse(false, 'Error: ' + error.message);
-  }
-}
 
-// Permitir peticiones GET (para testing)
-function doGet(e) {
-  return ContentService.createTextOutput(
-    JSON.stringify({success: true, message: 'API funcionando correctamente'})
-  ).setMimeType(ContentService.MimeType.JSON);
-}
+        .user-info {
+            flex: 1;
+        }
 
-// =================================== 
-// VALIDACIÓN DE USUARIO ACTIVO
-// =================================== 
+        .user-info h2 {
+            color: #333;
+            font-size: 20px;
+            margin-bottom: 5px;
+        }
 
-function isUserActive(usuario) {
-  if (!usuario) {
-    return false;
-  }
-  
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_USUARIOS);
-  const data = sheet.getDataRange().getValues();
-  
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (row[0] === usuario) {
-      return true;
-    }
-  }
-  
-  return false;
-}
+        .user-info p {
+            color: #666;
+            font-size: 14px;
+        }
 
-// =================================== 
-// FUNCIONES DE NEGOCIO
-// =================================== 
+        .logout-btn {
+            background: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
 
-// LOGIN
-function login(usuario, password) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_USUARIOS);
-  const data = sheet.getDataRange().getValues();
-  
-  for (let i = 1; i < data.length; i++) {
-    const row = data[i];
-    if (row[0] === usuario && row[1] === password) {
-      return createResponse(true, 'Login exitoso', { 
-        usuario: row[0], 
-        nombreCompleto: row[2] 
-      });
-    }
-  }
-  
-  return createResponse(false, 'Usuario o contraseña incorrectos');
-}
+        .logout-btn:hover {
+            background: #d32f2f;
+        }
 
-// OBTENER CLIENTES
-function getClientes() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CLIENTES);
-  const data = sheet.getDataRange().getValues();
-  
-  const clientes = [...new Set(data.slice(1).map(row => row[0]))].filter(Boolean);
-  
-  return createResponse(true, 'Clientes obtenidos', { clientes });
-}
+        .form-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: slideUp 0.5s ease;
+        }
 
-// OBTENER REFERENCIAS
-function getReferencias(cliente) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_CLIENTES);
-  const data = sheet.getDataRange().getValues();
-  
-  const referencias = data
-    .slice(1)
-    .filter(row => row[0] === cliente)
-    .map(row => row[1])
-    .filter(Boolean);
-  
-  return createResponse(true, 'Referencias obtenidas', { referencias });
-}
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
 
-// ✅ NUEVA FUNCIÓN: OBTENER MOTIVOS
-function getMotivos() {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_MOTIVOS);
-  const data = sheet.getDataRange().getValues();
-  
-  // Extraer motivos (columna 0, saltar encabezado)
-  const motivos = data
-    .slice(1)
-    .map(row => row[0])
-    .filter(Boolean);
-  
-  return createResponse(true, 'Motivos obtenidos', { motivos });
-}
+        .form-title {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
 
-// GUARDAR REGISTRO (ACTUALIZADO CON MOTIVO)
-function saveRegistro(registro) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_REGISTROS);
-  
-  // Formatear fecha de registro completa con segundos
-  const ahora = new Date();
-  const dia = String(ahora.getDate()).padStart(2, '0');
-  const mes = String(ahora.getMonth() + 1).padStart(2, '0');
-  const año = ahora.getFullYear();
-  const horas = String(ahora.getHours()).padStart(2, '0');
-  const minutos = String(ahora.getMinutes()).padStart(2, '0');
-  const segundos = String(ahora.getSeconds()).padStart(2, '0');
-  const fechaRegistro = `${dia}/${mes}/${año} ${horas}:${minutos}:${segundos}`;
-  
-  // ✅ Preparar fila CON EL NUEVO CAMPO "motivo" y fecha completa
-  const newRow = [
-    registro.usuario,
-    registro.cliente,
-    registro.referencia,
-    registro.cantidad,
-    registro.motivo,
-    registro.fechaEntrada,    // DD/MM/YYYY HH:MM
-    registro.fechaSalida,     // DD/MM/YYYY HH:MM
-    fechaRegistro             // DD/MM/YYYY HH:MM:SS (formato completo)
-  ];
-  
-  sheet.appendRow(newRow);
-  
-  return createResponse(true, 'Registro guardado correctamente');
-}
+        .form-group {
+            margin-bottom: 20px;
+        }
 
-// =================================== 
-// FUNCIÓN AUXILIAR PARA RESPUESTAS
-// =================================== 
+        label {
+            display: block;
+            color: #555;
+            margin-bottom: 8px;
+            font-weight: 500;
+            font-size: 14px;
+        }
 
-function createResponse(success, message, data = null) {
-  const response = { 
-    success: success, 
-    message: message 
-  };
-  
-  if (data) {
-    response.data = data;
-  }
-  
-  return ContentService
-    .createTextOutput(JSON.stringify(response))
-    .setMimeType(ContentService.MimeType.JSON);
-}
+        select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        select:focus, input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        select:disabled, input:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+        }
+
+        .datetime-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn-primary {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .success-message, .error-message {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .error-message {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .success-message.show, .error-message.show {
+            display: block;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .required {
+            color: #f44336;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .datetime-group {
+                grid-template-columns: 1fr;
+            }
+
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+
+            .logout-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="user-info">
+                <h2>📋 Registro de Partes</h2>
+                <p id="userName">Cargando...</p>
+            </div>
+            <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+        </div>
+
+        <!-- Formulario -->
+        <div class="form-card">
+            <h3 class="form-title">Nuevo Registro</h3>
+
+            <div id="successMessage" class="success-message"></div>
+            <div id="errorMessage" class="error-message"></div>
+
+            <form id="registroForm">
+                <!-- Cliente -->
+                <div class="form-group">
+                    <label for="cliente">Cliente <span class="required">*</span></label>
+                    <select id="cliente" required>
+                        <option value="">Selecciona un cliente...</option>
+                    </select>
+                </div>
+
+                <!-- Referencia -->
+                <div class="form-group">
+                    <label for="referencia">Referencia <span class="required">*</span></label>
+                    <select id="referencia" required disabled>
+                        <option value="">Primero selecciona un cliente</option>
+                    </select>
+                </div>
+
+                <!-- Cantidad -->
+                <div class="form-group">
+                    <label for="cantidad">Cantidad <span class="required">*</span></label>
+                    <input 
+                        type="number" 
+                        id="cantidad" 
+                        min="1" 
+                        step="1"
+                        placeholder="Ingresa la cantidad"
+                        required
+                    >
+                </div>
+
+                <!-- Motivo -->
+                <div class="form-group">
+                    <label for="motivo">Motivo <span class="required">*</span></label>
+                    <select id="motivo" required>
+                        <option value="">Selecciona un motivo...</option>
+                    </select>
+                </div>
+
+                <!-- Fechas -->
+                <div class="form-group">
+                    <label>Fecha y Hora de Entrada <span class="required">*</span></label>
+                    <div class="datetime-group">
+                        <input type="date" id="fechaEntrada" required>
+                        <input type="time" id="horaEntrada" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Fecha y Hora de Salida <span class="required">*</span></label>
+                    <div class="datetime-group">
+                        <input type="date" id="fechaSalida" required>
+                        <input type="time" id="horaSalida" required>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-primary" id="submitBtn">
+                    Guardar Registro
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // URL de la API
+        const API_URL = CONFIG.API_URL;
+        
+        // Variables globales
+        let userData = null;
+        let clientes = [];
+        let motivos = [];
+
+        // Verificar sesión al cargar
+        window.addEventListener('DOMContentLoaded', async () => {
+            // Verificar si hay sesión
+            const userDataStr = localStorage.getItem('userData');
+            if (!userDataStr) {
+                window.location.href = 'index.html';
+                return;
+            }
+
+            userData = JSON.parse(userDataStr);
+            document.getElementById('userName').textContent = `Bienvenido, ${userData.nombreCompleto}`;
+
+            // Cargar datos iniciales
+            await cargarClientes();
+            await cargarMotivos();
+            
+            // Establecer fecha y hora actual por defecto
+            setFechaHoraActual();
+        });
+
+        // Establecer fecha y hora actual
+        function setFechaHoraActual() {
+            const ahora = new Date();
+            const fecha = ahora.toISOString().split('T')[0];
+            const hora = ahora.toTimeString().slice(0, 5);
+
+            document.getElementById('fechaEntrada').value = fecha;
+            document.getElementById('horaEntrada').value = hora;
+            document.getElementById('fechaSalida').value = fecha;
+            document.getElementById('horaSalida').value = hora;
+        }
+
+        // Cargar clientes
+        async function cargarClientes() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'getClientes',
+                        usuario: userData.usuario
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    clientes = result.data.clientes;
+                    const selectCliente = document.getElementById('cliente');
+                    
+                    clientes.forEach(cliente => {
+                        const option = document.createElement('option');
+                        option.value = cliente;
+                        option.textContent = cliente;
+                        selectCliente.appendChild(option);
+                    });
+                } else {
+                    if (result.message.includes('expirado')) {
+                        logout();
+                    } else {
+                        showError(result.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error al cargar clientes');
+            }
+        }
+
+        // Cargar motivos
+        async function cargarMotivos() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'getMotivos',
+                        usuario: userData.usuario
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    motivos = result.data.motivos;
+                    const selectMotivo = document.getElementById('motivo');
+                    
+                    motivos.forEach(motivo => {
+                        const option = document.createElement('option');
+                        option.value = motivo;
+                        option.textContent = motivo;
+                        selectMotivo.appendChild(option);
+                    });
+                } else {
+                    if (result.message.includes('expirado')) {
+                        logout();
+                    } else {
+                        showError(result.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error al cargar motivos');
+            }
+        }
+
+        // Cargar referencias cuando se selecciona un cliente
+        document.getElementById('cliente').addEventListener('change', async (e) => {
+            const cliente = e.target.value;
+            const selectReferencia = document.getElementById('referencia');
+            
+            // Limpiar referencias
+            selectReferencia.innerHTML = '<option value="">Cargando...</option>';
+            selectReferencia.disabled = true;
+
+            if (!cliente) {
+                selectReferencia.innerHTML = '<option value="">Primero selecciona un cliente</option>';
+                return;
+            }
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'getReferencias',
+                        usuario: userData.usuario,
+                        cliente: cliente
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    selectReferencia.innerHTML = '<option value="">Selecciona una referencia...</option>';
+                    
+                    result.data.referencias.forEach(referencia => {
+                        const option = document.createElement('option');
+                        option.value = referencia;
+                        option.textContent = referencia;
+                        selectReferencia.appendChild(option);
+                    });
+                    
+                    selectReferencia.disabled = false;
+                } else {
+                    if (result.message.includes('expirado')) {
+                        logout();
+                    } else {
+                        selectReferencia.innerHTML = '<option value="">Error al cargar referencias</option>';
+                        showError(result.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                selectReferencia.innerHTML = '<option value="">Error al cargar referencias</option>';
+                showError('Error al cargar referencias');
+            }
+        });
+
+        // Enviar formulario
+        document.getElementById('registroForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="loading"></span> Guardando...';
+
+            // Ocultar mensajes
+            document.getElementById('successMessage').classList.remove('show');
+            document.getElementById('errorMessage').classList.remove('show');
+
+            // Obtener datos del formulario
+            const cliente = document.getElementById('cliente').value;
+            const referencia = document.getElementById('referencia').value;
+            const cantidad = parseInt(document.getElementById('cantidad').value);
+            const motivo = document.getElementById('motivo').value;
+            
+            const fechaEntrada = document.getElementById('fechaEntrada').value;
+            const horaEntrada = document.getElementById('horaEntrada').value;
+            const fechaSalida = document.getElementById('fechaSalida').value;
+            const horaSalida = document.getElementById('horaSalida').value;
+
+            // Formatear fechas a DD/MM/YYYY HH:MM
+            const fechaEntradaFormateada = formatearFechaHora(fechaEntrada, horaEntrada);
+            const fechaSalidaFormateada = formatearFechaHora(fechaSalida, horaSalida);
+
+            // Preparar registro
+            const registro = {
+                usuario: userData.usuario,
+                cliente: cliente,
+                referencia: referencia,
+                cantidad: cantidad,
+                motivo: motivo,
+                fechaEntrada: fechaEntradaFormateada,
+                fechaSalida: fechaSalidaFormateada
+            };
+
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify({
+                        action: 'saveRegistro',
+                        registro: registro
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showSuccess('¡Registro guardado correctamente!');
+                    
+                    // Limpiar formulario
+                    document.getElementById('registroForm').reset();
+                    document.getElementById('referencia').disabled = true;
+                    document.getElementById('referencia').innerHTML = '<option value="">Primero selecciona un cliente</option>';
+                    
+                    // Restablecer fechas
+                    setFechaHoraActual();
+                } else {
+                    if (result.message.includes('expirado')) {
+                        logout();
+                    } else {
+                        showError(result.message);
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showError('Error al guardar el registro');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Guardar Registro';
+            }
+        });
+
+        // Formatear fecha y hora a DD/MM/YYYY HH:MM
+        function formatearFechaHora(fecha, hora) {
+            const [year, month, day] = fecha.split('-');
+            return `${day}/${month}/${year} ${hora}`;
+        }
+
+        // Mostrar mensaje de éxito
+        function showSuccess(message) {
+            const successMsg = document.getElementById('successMessage');
+            successMsg.textContent = message;
+            successMsg.classList.add('show');
+            
+            setTimeout(() => {
+                successMsg.classList.remove('show');
+            }, 5000);
+        }
+
+        // Mostrar mensaje de error
+        function showError(message) {
+            const errorMsg = document.getElementById('errorMessage');
+            errorMsg.textContent = message;
+            errorMsg.classList.add('show');
+            
+            setTimeout(() => {
+                errorMsg.classList.remove('show');
+            }, 5000);
+        }
+
+        // Cerrar sesión
+        function logout() {
+            localStorage.removeItem('userData');
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>
