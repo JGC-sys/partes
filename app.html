@@ -339,6 +339,10 @@
             
             // Establecer fecha y hora actual por defecto
             setFechaHoraActual();
+
+            // Event listeners para actualizar hora de salida automáticamente
+            document.getElementById('fechaEntrada').addEventListener('change', actualizarHoraSalida);
+            document.getElementById('horaEntrada').addEventListener('change', actualizarHoraSalida);
         });
 
         // Establecer fecha y hora actual
@@ -349,8 +353,36 @@
 
             document.getElementById('fechaEntrada').value = fecha;
             document.getElementById('horaEntrada').value = hora;
-            document.getElementById('fechaSalida').value = fecha;
-            document.getElementById('horaSalida').value = hora;
+            
+            // Calcular hora de salida (30 minutos después)
+            calcularHoraSalida(ahora);
+        }
+
+        // Calcular hora de salida automáticamente (30 minutos después)
+        function calcularHoraSalida(fechaEntrada) {
+            // Crear fecha de salida sumando 30 minutos
+            const fechaSalida = new Date(fechaEntrada.getTime() + 30 * 60000);
+            
+            const fechaSalidaStr = fechaSalida.toISOString().split('T')[0];
+            const horaSalidaStr = fechaSalida.toTimeString().slice(0, 5);
+
+            document.getElementById('fechaSalida').value = fechaSalidaStr;
+            document.getElementById('horaSalida').value = horaSalidaStr;
+        }
+
+        function actualizarHoraSalida() {
+            const fechaEntrada = document.getElementById('fechaEntrada').value;
+            const horaEntrada = document.getElementById('horaEntrada').value;
+
+            if (fechaEntrada && horaEntrada) {
+                // Crear objeto Date con fecha y hora de entrada
+                const [year, month, day] = fechaEntrada.split('-');
+                const [hours, minutes] = horaEntrada.split(':');
+                const fechaEntradaObj = new Date(year, month - 1, day, hours, minutes);
+
+                // Calcular hora de salida
+                calcularHoraSalida(fechaEntradaObj);
+            }
         }
 
         // Cargar clientes
