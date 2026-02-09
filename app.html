@@ -7,6 +7,7 @@
     <title>Registro de Partes</title>
     <link rel="manifest" href="manifest.json">
     <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="config.js"></script>
     <style>
         * {
             margin: 0;
@@ -299,6 +300,14 @@
                     >
                 </div>
 
+                <!-- ✅ NUEVO CAMPO: Motivo -->
+                <div class="form-group">
+                    <label for="motivo" class="required">Motivo del Trabajo</label>
+                    <select id="motivo" name="motivo" required>
+                        <option value="">Selecciona un motivo...</option>
+                    </select>
+                </div>
+
                 <!-- Hora de Entrada -->
                 <div class="form-group">
                     <label for="horaEntrada" class="required">Hora de Entrada</label>
@@ -340,13 +349,14 @@
     </div>
 
     <script>
-        // URL de tu Google Apps Script
-        const API_URL = 'https://script.google.com/macros/s/AKfycby6MoZWCksJjf7Vq4BO7h8jFd5QhswBeRfFt1UzELrFLc5eVWfjHAdhZVV2t0vJEksU4w/exec';
+        // URL de tu Google Apps Script (desde archivo de configuración)
+        const API_URL = CONFIG.API_URL;
 
         // Elementos del DOM
         const registroForm = document.getElementById('registroForm');
         const clienteSelect = document.getElementById('cliente');
         const referenciaSelect = document.getElementById('referencia');
+        const motivoSelect = document.getElementById('motivo');  // ✅ NUEVO
         const submitBtn = document.getElementById('submitBtn');
         const alertSuccess = document.getElementById('alertSuccess');
         const alertError = document.getElementById('alertError');
@@ -376,11 +386,12 @@
             }
         }
 
-        // Cargar clientes y referencias
+        // Cargar clientes, referencias y motivos
         async function loadData() {
             loadingOverlay.classList.add('show');
 
             try {
+                // ✅ Cargar clientes
                 const response = await fetch(API_URL, {
                     method: 'POST',
                     headers: {
@@ -388,7 +399,7 @@
                     },
                     body: JSON.stringify({
                         action: 'getClientes',
-                        usuario: userData.usuario  // ✅ Enviar usuario para validación
+                        usuario: userData.usuario
                     })
                 });
 
@@ -407,8 +418,12 @@
                     for (const cliente of result.data.clientes) {
                         await loadReferencias(cliente);
                     }
+
+                    // ✅ NUEVO: Cargar motivos
+                    await loadMotivos();
+
                 } else {
-                    // ✅ Si el usuario fue deshabilitado, cerrar sesión
+                    // Si el usuario fue deshabilitado, cerrar sesión
                     if (result.message.includes('sesión ha expirado')) {
                         alert(result.message);
                         localStorage.removeItem('userData');
@@ -454,6 +469,42 @@
                 }
             } catch (error) {
                 console.error('Error cargando referencias:', error);
+            }
+        }
+
+        // ✅ NUEVA FUNCIÓN: Cargar motivos
+        async function loadMotivos() {
+            try {
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain',
+                    },
+                    body: JSON.stringify({
+                        action: 'getMotivos',
+                        usuario: userData.usuario
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    // Cargar motivos en el select
+                    result.data.motivos.forEach(motivo => {
+                        const option = document.createElement('option');
+                        option.value = motivo;
+                        option.textContent = motivo;
+                        motivoSelect.appendChild(option);
+                    });
+                } else {
+                    if (result.message.includes('sesión ha expirado')) {
+                        alert(result.message);
+                        localStorage.removeItem('userData');
+                        window.location.href = 'index.html';
+                    }
+                }
+            } catch (error) {
+                console.error('Error cargando motivos:', error);
             }
         }
 
@@ -510,6 +561,7 @@
                 cliente: document.getElementById('cliente').value,
                 referencia: document.getElementById('referencia').value,
                 cantidad: document.getElementById('cantidad').value,
+                motivo: document.getElementById('motivo').value,  // ✅ NUEVO CAMPO
                 fechaEntrada: fechaHoy + ' ' + horaEntrada,
                 fechaSalida: fechaHoy + ' ' + horaSalida
             };
