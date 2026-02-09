@@ -4,8 +4,7 @@
 
 // ⬇️ CAMBIA SOLO ESTA URL CUANDO ACTUALICES EL DESPLIEGUE
 const CONFIG = {
-    API_URL: 'https://script.google.com/macros/s/AKfycbxq-WmWtqlVrYroNHDLqaIZakIsVHWWvCj0sEiWiCQoBRY3vSqC8ju2Z5geoIHXhfwqEQ/exec'
+    API_URL: 'https://script.google.com/macros/s/AKfycbzPGqnOAxvJMcpI-QkeWmG1AlbJQLNBfdOxzcxEe3Dc7C_5UYiTubQppmYvDjqzce42/exec',
+    API_TOKEN: 'PARTES_' + new Date().getFullYear() + '_' + (new Date().getMonth() + 1)
 };
-
-// No modificar nada más abajo
 window.CONFIG = CONFIG;
