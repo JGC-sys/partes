@@ -106,7 +106,7 @@
             font-size: 14px;
         }
 
-        select, input {
+        select, input, textarea {
             width: 100%;
             padding: 12px;
             border: 2px solid #e0e0e0;
@@ -116,13 +116,18 @@
             background: white;
         }
 
-        select:focus, input:focus {
+        textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        select:focus, input:focus, textarea:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
         }
 
-        select:disabled, input:disabled {
+        select:disabled, input:disabled, textarea:disabled {
             background: #f5f5f5;
             cursor: not-allowed;
         }
@@ -214,6 +219,25 @@
             color: #f44336;
         }
 
+        /* Estilo para el botón de voz */
+        .voice-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            width: 50px;
+            cursor: pointer;
+            font-size: 20px;
+            transition: background 0.3s;
+        }
+        .voice-btn:hover {
+            background: #5a6fd8;
+        }
+        .voice-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
         /* Responsive */
         @media (max-width: 600px) {
             .datetime-group {
@@ -286,6 +310,27 @@
                     <select id="motivo" required>
                         <option value="">Selecciona un motivo...</option>
                     </select>
+                </div>
+
+                <!-- Turno (nuevo) -->
+                <div class="form-group">
+                    <label for="turno">Turno <span class="required">*</span></label>
+                    <select id="turno" required>
+                        <option value="">Selecciona un turno...</option>
+                        <option value="Mañana">Mañana</option>
+                        <option value="Tarde">Tarde</option>
+                        <option value="Noche">Noche</option>
+                    </select>
+                </div>
+
+                <!-- Observaciones con micrófono (nuevo) -->
+                <div class="form-group">
+                    <label for="observaciones">Observaciones</label>
+                    <div style="display: flex; gap: 10px;">
+                        <textarea id="observaciones" rows="3" placeholder="Escribe aquí o usa el micrófono..." style="flex: 1;"></textarea>
+                        <button type="button" id="voiceBtn" class="voice-btn" title="Entrada por voz">🎤</button>
+                    </div>
+                    <small style="color: #666;">Haz clic en el micrófono y habla para llenar el campo automáticamente.</small>
                 </div>
 
                 <!-- Fechas -->
@@ -382,6 +427,9 @@
             // Event listeners para actualizar hora de salida automáticamente
             document.getElementById('fechaEntrada').addEventListener('change', actualizarHoraSalida);
             document.getElementById('horaEntrada').addEventListener('change', actualizarHoraSalida);
+
+            // Inicializar reconocimiento de voz
+            inicializarVoz();
         });
 
         // Establecer fecha y hora actual
@@ -581,6 +629,8 @@
             const referencia = document.getElementById('referencia').value;
             const cantidad = parseInt(document.getElementById('cantidad').value);
             const motivo = document.getElementById('motivo').value;
+            const turno = document.getElementById('turno').value;               // nuevo
+            const observaciones = document.getElementById('observaciones').value; // nuevo
             
             const fechaEntrada = document.getElementById('fechaEntrada').value;
             const horaEntrada = document.getElementById('horaEntrada').value;
@@ -598,6 +648,8 @@
                 referencia: referencia,
                 cantidad: cantidad,
                 motivo: motivo,
+                turno: turno,                         // nuevo
+                observaciones: observaciones,         // nuevo
                 fechaEntrada: fechaEntradaFormateada,
                 fechaSalida: fechaSalidaFormateada
             };
@@ -621,6 +673,8 @@
                     document.getElementById('registroForm').reset();
                     document.getElementById('referencia').disabled = true;
                     document.getElementById('referencia').innerHTML = '<option value="">Primero selecciona un cliente</option>';
+                    document.getElementById('turno').value = '';               // limpiar turno
+                    document.getElementById('observaciones').value = '';       // limpiar observaciones
                     
                     // Restablecer fechas
                     setFechaHoraActual();
@@ -672,6 +726,48 @@
         function logout() {
             localStorage.removeItem('userData');
             window.location.href = 'index.html';
+        }
+
+        // ============================================
+        // FUNCIONALIDAD DE RECONOCIMIENTO DE VOZ
+        // ============================================
+        function inicializarVoz() {
+            const voiceBtn = document.getElementById('voiceBtn');
+            const observacionesField = document.getElementById('observaciones');
+
+            if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                const recognition = new SpeechRecognition();
+                recognition.lang = 'es-ES';
+                recognition.continuous = false;
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                voiceBtn.addEventListener('click', () => {
+                    recognition.start();
+                    voiceBtn.style.background = '#f44336'; // indicar grabación
+                });
+
+                recognition.addEventListener('result', (event) => {
+                    const transcript = event.results[0][0].transcript;
+                    // Añadir al final del texto existente
+                    observacionesField.value += (observacionesField.value ? ' ' : '') + transcript;
+                });
+
+                recognition.addEventListener('end', () => {
+                    voiceBtn.style.background = '#667eea'; // restaurar color
+                });
+
+                recognition.addEventListener('error', (event) => {
+                    console.error('Error de voz:', event.error);
+                    voiceBtn.style.background = '#667eea';
+                    showError('No se pudo usar el micrófono. Verifica los permisos.');
+                });
+            } else {
+                voiceBtn.disabled = true;
+                voiceBtn.title = 'Voz no soportada en este navegador';
+                voiceBtn.style.opacity = 0.5;
+            }
         }
     </script>
 </body>
