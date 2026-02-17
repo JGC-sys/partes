@@ -312,18 +312,7 @@
                     </select>
                 </div>
 
-                <!-- Turno (nuevo) -->
-                <div class="form-group">
-                    <label for="turno">Turno <span class="required">*</span></label>
-                    <select id="turno" required>
-                        <option value="">Selecciona un turno...</option>
-                        <option value="Mañana">Mañana</option>
-                        <option value="Tarde">Tarde</option>
-                        <option value="Noche">Noche</option>
-                    </select>
-                </div>
-
-                <!-- Observaciones con micrófono (nuevo) -->
+                <!-- Observaciones con micrófono -->
                 <div class="form-group">
                     <label for="observaciones">Observaciones</label>
                     <div style="display: flex; gap: 10px;">
@@ -612,6 +601,28 @@
             }
         });
 
+        // ============================================
+        // FUNCIÓN PARA CALCULAR EL TURNO AUTOMÁTICAMENTE
+        // Basado en la hora de entrada (formato HH:MM)
+        // ============================================
+        function calcularTurno(horaEntrada) {
+            // horaEntrada en formato "HH:MM"
+            const [horas, minutos] = horaEntrada.split(':').map(Number);
+            const horaDecimal = horas + minutos / 60;
+
+            // Definir rangos:
+            // Mañana: 6:00 a 14:00 (incluye 6:00, excluye 14:00)
+            // Tarde: 14:00 a 22:00 (incluye 14:00, excluye 22:00)
+            // Noche: 22:00 a 6:00 (del día siguiente)
+            if (horaDecimal >= 6 && horaDecimal < 14) {
+                return 'Mañana';
+            } else if (horaDecimal >= 14 && horaDecimal < 22) {
+                return 'Tarde';
+            } else {
+                return 'Noche'; // de 22:00 a 6:00 (incluye 22:00 hasta 24:00 y 0:00 a 6:00)
+            }
+        }
+
         // Enviar formulario
         document.getElementById('registroForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -629,13 +640,15 @@
             const referencia = document.getElementById('referencia').value;
             const cantidad = parseInt(document.getElementById('cantidad').value);
             const motivo = document.getElementById('motivo').value;
-            const turno = document.getElementById('turno').value;               // nuevo
-            const observaciones = document.getElementById('observaciones').value; // nuevo
+            const observaciones = document.getElementById('observaciones').value;
             
             const fechaEntrada = document.getElementById('fechaEntrada').value;
             const horaEntrada = document.getElementById('horaEntrada').value;
             const fechaSalida = document.getElementById('fechaSalida').value;
             const horaSalida = document.getElementById('horaSalida').value;
+
+            // Calcular turno automáticamente según la hora de entrada
+            const turno = calcularTurno(horaEntrada);
 
             // Formatear fechas a DD/MM/YYYY HH:MM
             const fechaEntradaFormateada = formatearFechaHora(fechaEntrada, horaEntrada);
@@ -648,8 +661,8 @@
                 referencia: referencia,
                 cantidad: cantidad,
                 motivo: motivo,
-                turno: turno,                         // nuevo
-                observaciones: observaciones,         // nuevo
+                turno: turno,                         // calculado automáticamente
+                observaciones: observaciones,
                 fechaEntrada: fechaEntradaFormateada,
                 fechaSalida: fechaSalidaFormateada
             };
@@ -673,7 +686,6 @@
                     document.getElementById('registroForm').reset();
                     document.getElementById('referencia').disabled = true;
                     document.getElementById('referencia').innerHTML = '<option value="">Primero selecciona un cliente</option>';
-                    document.getElementById('turno').value = '';               // limpiar turno
                     document.getElementById('observaciones').value = '';       // limpiar observaciones
                     
                     // Restablecer fechas
