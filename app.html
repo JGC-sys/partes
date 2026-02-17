@@ -614,12 +614,12 @@
             // Mañana: 6:00 a 14:00 (incluye 6:00, excluye 14:00)
             // Tarde: 14:00 a 22:00 (incluye 14:00, excluye 22:00)
             // Noche: 22:00 a 6:00 (del día siguiente)
-            if (horaDecimal >= 6 && horaDecimal < 14) {
+            if (horaDecimal >= 5.5 && horaDecimal < 14.5) {
                 return 'Mañana';
-            } else if (horaDecimal >= 14 && horaDecimal < 22) {
+            } else if (horaDecimal >= 14.5 && horaDecimal < 22.5) {
                 return 'Tarde';
             } else {
-                return 'Noche'; // de 22:00 a 6:00 (incluye 22:00 hasta 24:00 y 0:00 a 6:00)
+                return 'Noche'; // de 22:30 a 5:30 
             }
         }
 
