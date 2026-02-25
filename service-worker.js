@@ -1,12 +1,12 @@
-const CACHE_NAME = 'partes-cache-v3';
+const CACHE_NAME = 'partes-cache-v4';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/app.html',
-  '/config.js',
-  '/manifest.json',
-  '/icon-192.png',
-  '/icon-512.png'
+  '/partes/',
+  '/partes/index.html',
+  '/partes/app.html',
+  '/partes/config.js',
+  '/partes/manifest.json',
+  '/partes/icon-192.png',
+  '/partes/icon-512.png'
 ];
 
 // Instalación del Service Worker
@@ -71,8 +71,7 @@ self.addEventListener('fetch', (event) => {
         });
       })
       .catch(() => {
-        // Si falla, mostrar página offline (opcional)
-        return caches.match('/index.html');
+        return caches.match('/partes/index.html');
       })
   );
 });
